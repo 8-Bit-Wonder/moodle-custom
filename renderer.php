@@ -4,7 +4,7 @@
         - Customizing the Next Page button can only be visible if certain conditions are met.
         - disable_next_page_sequential_behaviour()
         - cheating() <-- disable this after testing
-    */
+*/
     public function cheating($id,$slot){
         global $DB;
         $qas = $DB->get_record_sql('SELECT qa.rightanswer cheat_answer
