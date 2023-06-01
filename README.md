@@ -1,2 +1,2 @@
-# moodle-mod-quiz-custom-
-A repository contains customized code that either exploits moodle quiz or twists quiz behavior
+# moodle-custom
+A repository contains customized code that either exploits or twists Moodle behavior
