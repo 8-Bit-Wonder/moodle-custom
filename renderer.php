@@ -263,3 +263,174 @@ public function review_page(quiz_attempt $attemptobj, $slots, $page, $showall,
         }
         return $output;
 }
+
+/* 15/06/2023
+        Custom code to erase the confusion
+    */
+    public function hide_state_column(){
+        $this->custom_css ="";
+        $this->custom_css .=html_writer::start_tag('style');
+        $this->custom_css .="th.header.c1 ".$this->css_display_none;
+        $this->custom_css .=" ";
+        $this->custom_css .="td.cell.c1 ".$this->css_display_none;
+        $this->custom_css .=html_writer::end_tag('style');
+        echo $this->custom_css;
+    }
+    public function hide_summary_panel(){
+        $this->custom_css ="";
+        $this->custom_css .=html_writer::start_tag('style');
+        $this->custom_css .="div.card-body.p-3 ".$this->css_display_none;
+        $this->custom_css .=html_writer::end_tag('style');
+        echo $this->custom_css;
+    }
+    public function hide_review_panel(){
+        $this->custom_css ="";
+        $this->custom_css .=html_writer::start_tag('style');
+        $this->custom_css .="div.card-body.p-3 ".$this->css_display_none;
+        $this->custom_css .=html_writer::end_tag('style');
+        echo $this->custom_css;
+    }
+    protected $summary_panel_div = "mod_quiz_navblock";
+    protected $custom_progress_track = "custom_progress_track";
+    protected $custom_html; protected $completion_text = 'Đã hoàn thành';
+    public function count_total_questions($attempt,$user){
+        global $DB;
+        $query = "";
+        $query .= "SELECT q.id,qa.id,qa.rightanswer
+        FROM {question_usages} quba
+        INNER JOIN {question_attempts} qa ON qa.questionusageid = quba.id
+        INNER JOIN {question_attempt_steps} qas ON qas.questionattemptid = qa.id
+		INNER JOIN {quiz_attempts} qz ON qz.uniqueid = quba.id
+		INNER JOIN {question} q ON q.id = qa.questionid
+        WHERE qz.id = ".$attempt." AND qas.userid = ".$user."
+        GROUP BY	q.id,qa.id,qa.rightanswer";
+        $total = $DB->get_records_sql($query,array());
+        return count($total);
+    }
+    public function count_finished_questions($attempt,$user){
+        global $DB;
+        $query = "";
+        $query .= "SELECT q.id,qa.id,qa.rightanswer,qa.responsesummary
+        FROM {question_usages} quba
+        INNER JOIN {question_attempts} qa ON qa.questionusageid = quba.id
+        INNER JOIN {question_attempt_steps} qas ON qas.questionattemptid = qa.id
+		INNER JOIN {quiz_attempts} qz ON qz.uniqueid = quba.id
+		INNER JOIN {question} q ON q.id = qa.questionid
+        WHERE qz.id = ".$attempt." AND qas.userid = ".$user."
+		AND qa.responsesummary is NOT NULL
+        GROUP BY	q.id,qa.id,qa.rightanswer,qa.responsesummary";
+        $quantity_finished = $DB->get_records_sql($query,array());
+        return count($quantity_finished);
+    }
+    protected $finished_questions;
+    protected $total_questions;
+    public function custom_progress_track($attempt){
+        global $USER;
+        $this->finished_questions = $this->count_finished_questions($attempt,$USER->id);
+        $this->total_questions = $this->count_total_questions($attempt,$USER->id);
+
+        $this->custom_html = "";
+        $this->custom_html .= html_writer::start_tag('div',array('id'=>$this->custom_progress_track,
+        'style'=>'margin:10px;padding:3px'));
+        $this->custom_html .= html_writer::start_tag('b').$this->completion_text.html_writer::end_tag('b');
+        $this->custom_html .= html_writer::empty_tag('br');
+        
+        $this->custom_html .= html_writer::start_tag('b',array('style'=>'color:green')).$this->finished_questions.'/'.$this->total_questions.html_writer::end_tag('b');
+        $this->custom_html .= html_writer::end_tag('div');
+        echo $this->custom_html;
+    }
+    public function moving_custom_div_to_panel(){
+
+        $this->custom_javascript = "";
+        $this->custom_javascript .=html_writer::start_tag('script');
+        $this->custom_javascript.="
+        document.getElementById('".$this->summary_panel_div."').appendChild(document.getElementById('".$this->custom_progress_track."')
+        );
+        ";
+        $this->custom_javascript .=html_writer::end_tag('script');
+        return $this->custom_javascript;
+    }
+    public function summary_table($attemptobj, $displayoptions) {
+        // Prepare the summary table header.
+        $table = new html_table();
+        $table->attributes['class'] = 'generaltable quizsummaryofattempt boxaligncenter';
+        $table->head = array(get_string('question', 'quiz'), get_string('status', 'quiz'));
+        $table->align = array('left', 'left');
+        $table->size = array('', '');
+        $markscolumn = $displayoptions->marks >= question_display_options::MARK_AND_MAX;
+        if ($markscolumn) {
+            $table->head[] = get_string('marks', 'quiz');
+            $table->align[] = 'left';
+            $table->size[] = '';
+        }
+        $tablewidth = count($table->align);
+        $table->data = array();
+
+        // Get the summary info for each question.
+        $slots = $attemptobj->get_slots();
+        foreach ($slots as $slot) {
+            // Add a section headings if we need one here.
+            $heading = $attemptobj->get_heading_before_slot($slot);
+            if ($heading) {
+                $heading = format_string($heading);
+            }
+            $sections = $attemptobj->get_quizobj()->get_sections();
+            if (!is_null($heading) && empty($heading) && count($sections) > 1) {
+                $heading = get_string('sectionnoname', 'quiz');
+                $heading = \html_writer::span($heading, 'dimmed_text');
+            }
+
+            if ($heading) {
+                $cell = new html_table_cell($heading);
+                $cell->header = true;
+                $cell->colspan = $tablewidth;
+                $table->data[] = array($cell);
+                $table->rowclasses[] = 'quizsummaryheading';
+            }
+
+            // Don't display information items.
+            if (!$attemptobj->is_real_question($slot)) {
+                continue;
+            }
+
+            // Real question, show it.
+            $flag = '';
+            if ($attemptobj->is_question_flagged($slot)) {
+                // Quiz has custom JS manipulating these image tags - so we can't use the pix_icon method here.
+                $flag = html_writer::empty_tag('img', array('src' => $this->image_url('i/flagged'),
+                        'alt' => get_string('flagged', 'question'), 'class' => 'questionflag icon-post'));
+            }
+            /*  15/06/2023
+                    - Add a condition checking if conditions are met, the custom code
+                    will be added here
+                    - hide_state_column()
+                    - hide_summary_panel()
+            */
+            if($this->triggered_custom_next_page($attemptobj->get_uniqueid(), // <--- CUSTOM CODE
+            $attemptobj->get_attemptid(),$attemptobj->get_cmid())){
+                $this->hide_state_column();
+                $this->hide_summary_panel();
+            }
+
+            if ($attemptobj->can_navigate_to($slot)) {
+                $row = array(html_writer::link($attemptobj->attempt_url($slot),
+                        $attemptobj->get_question_number($slot) . $flag),
+                        $attemptobj->get_question_status($slot, $displayoptions->correctness));
+            } else {
+                $row = array($attemptobj->get_question_number($slot) . $flag,
+                                $attemptobj->get_question_status($slot, $displayoptions->correctness));
+            }
+            
+            if ($markscolumn) {
+                $row[] = $attemptobj->get_question_mark($slot);
+            }
+            $table->data[] = $row;
+            $table->rowclasses[] = 'quizsummary' . $slot . ' ' . $attemptobj->get_question_state_class(
+                    $slot, $displayoptions->correctness);
+        }
+
+        // Print the summary table.
+        $output = html_writer::table($table);
+
+        return $output;
+}
