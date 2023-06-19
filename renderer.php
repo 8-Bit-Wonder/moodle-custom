@@ -2,7 +2,7 @@
 // Rework Next_Page_Custom()
 /* Custom functions
 
-	- triggered_custom_next_page
+	- triggered_custom_next_page : will trigger the custom code if requirements are met
 	- hide_progress_panel
 	- hide_next_page_button
 	- cripple_choose_button
