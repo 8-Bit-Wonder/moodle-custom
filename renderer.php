@@ -1,14 +1,31 @@
 <?php
 // Rework Next_Page_Custom()
-    /* 
-        14/06/2023
-            -   triggered_custom_next_page
-            -   hide_progress_panel
-            -   rendering_custom_next_page_option_frame
-            -   hide_next_page_button
-            -   cripple_option_form
-            -   cripple_choose_button
-    */
+/* Custom functions
+
+	- triggered_custom_next_page
+	- hide_progress_panel
+	- hide_next_page_button
+	- cripple_choose_button
+	- cripple_option_form
+	- count_answer_num
+	- rendering_custom_next_page_option_frame
+	- cheating🧽
+	- hide_state_column
+	- hide_summary_panel
+	- hide_review_panel
+	- count_total_questions
+	- count_finished_questions
+	- custom_progress_track
+	- moving_custom_div_to_panel
+*/
+
+/* Main functions
+
+	- attempt_form
+	- summary_page
+	- review_page
+	- summary_table
+*/
     protected $css_display_none = "{ display:none!important; }"; // >:D I am important
     protected $custom_css;
     protected $custom_javascript;
